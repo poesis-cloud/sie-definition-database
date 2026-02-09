@@ -1,0 +1,6 @@
+apiVersion: v2
+name: sie-definition-database
+description: PostgreSQL for the SIE definition database
+type: application
+version: 0.1.0
+appVersion: "16.3"
