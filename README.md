@@ -2,7 +2,7 @@
 
 This module packages the **Definition Store** for SIE as a Helm chart.
 
-In SIE’s three-plane architecture, the Definition Store is the source of truth for **asserted definitions** (e.g., systemic primitives, policies, rules, lifecycles, governance decisions) and their versioning/audit metadata.
+In SIE's six-plane, two-layer architecture, the Definition Store is the source of truth for **asserted definitions** (e.g., systemic primitives, policies, rules, lifecycles, governance decisions) and their versioning/audit metadata.
 
 ## What’s in here
 
