@@ -24,7 +24,7 @@ permissions:
   id-token: write
 
 jobs:
-  deploy-aks:
+  prod-deploy:
     if: ${{ github.event.inputs.target == 'aks' }}
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
@@ -37,7 +37,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Set AKS context
-        uses: azure/aks-set-context@v4
+        uses: azure/aks-set-context@v3
         with:
           resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
           cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
@@ -47,18 +47,21 @@ jobs:
             echo "Missing required environment secret: DB_PASSWORD" >&2
             exit 1
           }
-      - name: Helm deploy
+      - name: Deploy with Makefile
         run: |
-          helm upgrade --install sie-definition-database \
-            deploy/helm/sie-definition-database \
-            -n sie --create-namespace \
-            -f deploy/helm/sie-definition-database/values-aks.yaml \
-            -f deploy/helm/sie-definition-database/environments/${{ github.event.inputs.environment }}/values.yaml \
-            --set-string secrets.DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          make prod-deploy \
+            DEPLOY_ENV=${{ github.event.inputs.environment }} \
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
 
   deploy-onprem:
     if: ${{ github.event.inputs.target == 'onprem' }}
-    needs: package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Package helm chart
+        run: make package-helm
+      - name: Upload helm package
+        uses: actions/upload-artifact@v4
+        with:
+          name: definition-database-helm-package
+          path: "*.tgz"

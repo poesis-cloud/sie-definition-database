@@ -1,3 +1,5 @@
+# Preprod environment values
+
 nameOverride: ""
 fullnameOverride: ""
 
@@ -15,10 +17,12 @@ service:
 
 postgres:
   user: sie
-  password: change-me
   database: sie_definition
   existingSecret: ""
   extensions: []
+
+secrets:
+  DB_PASSWORD: ""
 
 initdb:
   enabled: true
@@ -31,7 +35,13 @@ persistence:
   accessModes:
     - ReadWriteOnce
 
-resources: {}
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
 
 podSecurityContext: {}
 securityContext: {}

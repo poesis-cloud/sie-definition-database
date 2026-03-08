@@ -1,26 +1,46 @@
 SHELL := /bin/bash
+.EXPORT_ALL_VARIABLES:
 
-.PHONY: local-check local-up local-down
+.PHONY: dev-check dev-up dev-down deploy-check prod-deploy package-helm
+
+-include .env
+-include .env.dev
 
 NAMESPACE ?= sie
+DEPLOY_ENV ?= preprod
 RELEASE_DEF_DB ?= sie-definition-database
 
-DEF_DB_CHART ?= deploy/helm/sie-definition-database
+DEF_DB_CHART ?= ops/helm
+DEF_DB_ENV_FILE ?= $(DEF_DB_CHART)/environments/$(DEPLOY_ENV)/values.yaml
 
-PORT_FORWARD_PID_FILE ?= .local-port-forwards.pids
+PORT_FORWARD_PID_FILE ?= .dev-port-forwards.pids
 
-local-check:
+dev-check:
 	@command -v kubectl >/dev/null 2>&1 || { echo "Missing required command: kubectl"; exit 1; }
 	@command -v helm >/dev/null 2>&1 || { echo "Missing required command: helm"; exit 1; }
 	@kubectl config current-context >/dev/null 2>&1 || { echo "No active Kubernetes context. Configure kubeconfig first."; exit 1; }
 	@kubectl get ns >/dev/null 2>&1 || { echo "Cannot reach Kubernetes API with current context."; exit 1; }
 	@test -d "$(DEF_DB_CHART)" || { echo "Missing chart directory: $(DEF_DB_CHART)"; exit 1; }
-	@echo "local-check passed"
+	@test -f "$(DEF_DB_CHART)/environments/dev/values.yaml" || { echo "Missing dev values file: $(DEF_DB_CHART)/environments/dev/values.yaml"; exit 1; }
+	@echo "dev-check passed"
 
-local-up:
-	@$(MAKE) local-check
+deploy-check:
+	@command -v kubectl >/dev/null 2>&1 || { echo "Missing required command: kubectl"; exit 1; }
+	@command -v helm >/dev/null 2>&1 || { echo "Missing required command: helm"; exit 1; }
+	@kubectl config current-context >/dev/null 2>&1 || { echo "No active Kubernetes context. Configure kubeconfig first."; exit 1; }
+	@kubectl get ns >/dev/null 2>&1 || { echo "Cannot reach Kubernetes API with current context."; exit 1; }
+	@test -d "$(DEF_DB_CHART)" || { echo "Missing chart directory: $(DEF_DB_CHART)"; exit 1; }
+	@test -f "$(DEF_DB_ENV_FILE)" || { echo "Missing environment values file: $(DEF_DB_ENV_FILE)"; exit 1; }
+	@: "$${DB_PASSWORD:?Missing DB_PASSWORD in environment}"
+	@echo "deploy-check passed"
+
+dev-up:
+	@$(MAKE) dev-check
+	@: "$${DB_PASSWORD:?Missing DB_PASSWORD in environment}"
 	kubectl get ns $(NAMESPACE) >/dev/null 2>&1 || kubectl create ns $(NAMESPACE) >/dev/null
-	helm upgrade --install $(RELEASE_DEF_DB) $(DEF_DB_CHART) -n $(NAMESPACE) --create-namespace --wait --timeout 10m0s --set persistence.enabled=false
+	helm upgrade --install $(RELEASE_DEF_DB) $(DEF_DB_CHART) -n $(NAMESPACE) --create-namespace --wait --timeout 10m0s \
+		-f $(DEF_DB_CHART)/environments/dev/values.yaml \
+		--set-string secrets.DB_PASSWORD="$${DB_PASSWORD}"
 	@if [[ -f "$(PORT_FORWARD_PID_FILE)" ]]; then \
 		xargs -r kill < "$(PORT_FORWARD_PID_FILE)" 2>/dev/null || true; \
 		rm -f "$(PORT_FORWARD_PID_FILE)"; \
@@ -28,9 +48,20 @@ local-up:
 	nohup kubectl -n $(NAMESPACE) port-forward svc/$(RELEASE_DEF_DB) 5432:5432 >/tmp/sie-db-pf-postgres.log 2>&1 & echo $$! >> "$(PORT_FORWARD_PID_FILE)"
 	@echo "Definition Database is ready and port-forward started."
 
-local-down:
+dev-down:
 	@if [[ -f "$(PORT_FORWARD_PID_FILE)" ]]; then \
 		xargs -r kill < "$(PORT_FORWARD_PID_FILE)" 2>/dev/null || true; \
 		rm -f "$(PORT_FORWARD_PID_FILE)"; \
 	fi
 	helm uninstall $(RELEASE_DEF_DB) -n $(NAMESPACE) || true
+
+prod-deploy:
+	@$(MAKE) deploy-check
+	helm upgrade --install $(RELEASE_DEF_DB) $(DEF_DB_CHART) -n $(NAMESPACE) --create-namespace --wait --timeout 10m0s \
+		-f $(DEF_DB_ENV_FILE) \
+		--set-string secrets.DB_PASSWORD="$${DB_PASSWORD}"
+
+package-helm:
+	@command -v helm >/dev/null 2>&1 || { echo "Missing required command: helm"; exit 1; }
+	@test -d "$(DEF_DB_CHART)" || { echo "Missing chart directory: $(DEF_DB_CHART)"; exit 1; }
+	helm package $(DEF_DB_CHART)
