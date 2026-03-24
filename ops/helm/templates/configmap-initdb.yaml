@@ -1,4 +1,4 @@
-{{- $defFiles := .Files.Glob "definition/*.sql" -}}
+{{- $defFiles := .Files.Glob "def/*.sql" -}}
 {{- $hasDef := gt (len $defFiles) 0 -}}
 {{- $hasExt := gt (len .Values.postgres.extensions) 0 -}}
 {{- $hasExtra := gt (len .Values.initdb.extraScripts) 0 -}}

@@ -52,13 +52,13 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
-            {{- if and .Values.initdb.enabled (or (gt (len (.Files.Glob "definition/*.sql")) 0) (gt (len .Values.postgres.extensions) 0) (gt (len .Values.initdb.extraScripts) 0)) }}
+            {{- if and .Values.initdb.enabled (or (gt (len (.Files.Glob "def/*.sql")) 0) (gt (len .Values.postgres.extensions) 0) (gt (len .Values.initdb.extraScripts) 0)) }}
             - name: initdb
               mountPath: /docker-entrypoint-initdb.d
             {{- end }}
-      {{- if or (and .Values.initdb.enabled (or (gt (len (.Files.Glob "definition/*.sql")) 0) (gt (len .Values.postgres.extensions) 0) (gt (len .Values.initdb.extraScripts) 0))) (not .Values.persistence.enabled) }}
+      {{- if or (and .Values.initdb.enabled (or (gt (len (.Files.Glob "def/*.sql")) 0) (gt (len .Values.postgres.extensions) 0) (gt (len .Values.initdb.extraScripts) 0))) (not .Values.persistence.enabled) }}
       volumes:
-        {{- if and .Values.initdb.enabled (or (gt (len (.Files.Glob "definition/*.sql")) 0) (gt (len .Values.postgres.extensions) 0) (gt (len .Values.initdb.extraScripts) 0)) }}
+        {{- if and .Values.initdb.enabled (or (gt (len (.Files.Glob "def/*.sql")) 0) (gt (len .Values.postgres.extensions) 0) (gt (len .Values.initdb.extraScripts) 0)) }}
         - name: initdb
           configMap:
             name: {{ include "sie-definition-database.fullname" . }}-initdb

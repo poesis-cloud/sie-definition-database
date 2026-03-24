@@ -8,7 +8,7 @@ In SIE's six-plane, two-layer architecture, the Definition Store is the source o
 
 - `Chart.yaml`, `values.yaml`: Helm chart metadata and configuration
 - `templates/`: Kubernetes manifests (StatefulSet/Service/Secrets/ConfigMaps)
-- `definition/00_jsonb_bootstrap.sql`: init SQL executed on first start to bootstrap the database schema and JSONB conventions
+- `def/00_jsonb_bootstrap.sql`: init SQL executed on first start to bootstrap the database schema and JSONB conventions
 
 ## How to use
 
